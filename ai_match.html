@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Match</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f4f6fb;
+      background-image:
+        radial-gradient(at 15% 0%, rgba(79, 70, 229, 0.08) 0px, transparent 50%),
+        radial-gradient(at 85% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 45%);
+      color: #0f172a;
+    }
+    .surface-card {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 8px 30px -10px rgba(15, 23, 42, 0.06);
+    }
+    .pill-active {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: #ffffff;
+      border-color: #4338ca;
+      box-shadow: 0 2px 8px -2px rgba(79, 70, 229, 0.4);
+    }
+    .pill-inactive {
+      background-color: #ffffff;
+      color: #334155;
+      border-color: #e2e8f0;
+    }
+    .pill-inactive:hover {
+      border-color: #818cf8;
+      color: #4338ca;
+      background-color: #eef2ff;
+    }
+    .mod-active {
+      background: linear-gradient(135deg, #059669, #047857);
+      color: #ffffff;
+      border-color: #047857;
+      box-shadow: 0 2px 8px -2px rgba(5, 150, 105, 0.35);
+    }
+    .mod-inactive {
+      background-color: #ffffff;
+      color: #334155;
+      border-color: #e2e8f0;
+    }
+    .mod-inactive:hover {
+      border-color: #34d399;
+      color: #047857;
+      background-color: #ecfdf5;
+    }
+    .fade-in {
+      animation: fadeIn 0.25s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- Refined Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <!-- AI Match Brand + Custom Geometric Logo -->
+      <div class="flex items-center gap-2.5">
+        <svg class="w-9 h-9 shrink-0" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="AI Match Logo">
+          <defs>
+            <linearGradient id="aimGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#4F46E5" />
+              <stop offset="55%" stop-color="#0EA5E9" />
+              <stop offset="100%" stop-color="#10B981" />
+            </linearGradient>
+          </defs>
+          <rect width="40" height="40" rx="12" fill="url(#aimGrad)" />
+          <circle cx="14.5" cy="20" r="4.5" stroke="white" stroke-width="2.2" />
+          <circle cx="25.5" cy="20" r="4.5" stroke="white" stroke-width="2.2" />
+          <path d="M19 20H21" stroke="white" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M20 9.5L21.4 13.1L25 14.5L21.4 15.9L20 19.5L18.6 15.9L15 14.5L18.6 13.1L20 9.5Z" fill="white" fill-opacity="0.92" />
+        </svg>
+        <span class="text-lg sm:text-xl font-bold tracking-tight text-slate-900">AI <span class="bg-gradient-to-r from-indigo-600 to-emerald-600 bg-clip-text text-transparent">Match</span></span>
+      </div>
+
+      <!-- Top Actions: Bilingual Toggle + Live Sync -->
+      <div class="flex items-center gap-2">
+        <button type="button" id="langBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition">
+          <span>🌐</span>
+          <span id="langBtnText">EN</span>
+        </button>
+
+        <button type="button" id="syncBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">
+          <span id="syncIcon">🔄</span>
+          <span id="syncText">同步最新模型与榜单</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-7 space-y-7 fade-in">
+
+    <!-- Section 1: Configuration & Input -->
+    <div class="surface-card rounded-3xl p-5 sm:p-7 space-y-6">
+
+      <!-- Step 01: Project Type -->
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 text-[11px] font-bold">01</span>
+          <label id="lblStep1" class="text-xs sm:text-sm font-bold text-slate-800">选择项目形态</label>
+        </div>
+        <div id="projectTypeGroup" class="flex flex-wrap gap-2">
+          <button type="button" class="type-pill pill-active px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="web">Web 网站</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="saas">SaaS 全栈应用</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="extension">浏览器插件</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="desktop">桌面软件</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="android">Android 移动应用</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="mobile_cross">iOS / 跨平台 App</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="miniprogram">小程序</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="cli">自动化脚本 / CLI</button>
+          <button type="button" class="type-pill pill-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-type="agent">AI Agent / 工作流</button>
+        </div>
+      </div>
+
+      <!-- Step 02: Core Modules -->
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-100 text-emerald-700 text-[11px] font-bold">02</span>
+          <label id="lblStep2" class="text-xs sm:text-sm font-bold text-slate-800">勾选核心功能件（可多选）</label>
+        </div>
+        <div id="moduleGroup" class="flex flex-wrap gap-2">
+          <button type="button" class="mod-pill mod-active px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="frontend">前端界面 (UI/UX)</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="backend">后端服务</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="database">数据库存储</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="auth">用户登录鉴权</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="payment">支付订阅</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="api">第三方 API 集成</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="ai">AI 能力接入</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="data">数据采集 / 处理</button>
+          <button type="button" class="mod-pill mod-inactive px-3.5 py-1.5 rounded-xl border text-xs font-medium transition" data-mod="local">本地离线 / 隐私</button>
+        </div>
+      </div>
+
+      <!-- Step 03: Idea Input -->
+      <div class="space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-200 text-slate-700 text-[11px] font-bold">03</span>
+          <label id="lblStep3" for="ideaInput" class="text-xs sm:text-sm font-bold text-slate-800">补充具体想法与业务场景</label>
+        </div>
+        <textarea id="ideaInput" rows="3" class="w-full rounded-2xl border border-slate-200 bg-slate-50/60 focus:bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition" placeholder="请描述你的核心功能、目标用户或特殊需求..."></textarea>
+      </div>
+
+      <!-- Constraints Inset Bar -->
+      <div class="rounded-2xl bg-slate-50/90 border border-slate-200/80 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div>
+          <label id="lblBudget" for="budgetSelect" class="block text-xs font-semibold text-slate-600 mb-1.5">预算策略</label>
+          <select id="budgetSelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-indigo-500 outline-none shadow-sm">
+            <option value="free" selected>极客零成本（$0 免费额度优先）</option>
+            <option value="value">极致性价比（&lt;$10/月 或超低按量）</option>
+            <option value="flagship">效果至上（不限预算，旗舰模型）</option>
+          </select>
+        </div>
+        <div>
+          <label id="lblRole" for="roleSelect" class="block text-xs font-semibold text-slate-600 mb-1.5">开发方式偏好</label>
+          <select id="roleSelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-indigo-500 outline-none shadow-sm">
+            <option value="auto" selected>智能推荐（网页端优先/本地可选）</option>
+            <option value="web">网页端在线开发（免装环境，打开即写）</option>
+            <option value="dev">本地 IDE / 终端 CLI（完全掌控源码）</option>
+          </select>
+        </div>
+        <div>
+          <label id="lblPrivacy" for="privacySelect" class="block text-xs font-semibold text-slate-600 mb-1.5">网络与部署环境</label>
+          <select id="privacySelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-indigo-500 outline-none shadow-sm">
+            <option value="cloud" selected>全球云端标准 (Global Cloud API)</option>
+            <option value="cn">亚太 / 中国直连优化 (Direct Access)</option>
+            <option value="local">本地离线隐私 (Local &amp; Air-Gapped)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- AI Deep Understanding + Custom Model Config -->
+      <div class="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <label class="inline-flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-semibold text-indigo-950">
+            <input type="checkbox" id="useAiToggle" class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500" />
+            <span id="lblAiToggle">🧠 开启 AI 深度理解（支持内置免费接口或自定义大模型）</span>
+          </label>
+          <span id="connStatusBadge" class="hidden text-xs font-medium px-2.5 py-0.5 rounded-full"></span>
+        </div>
+
+        <div id="aiKeyRow" class="hidden space-y-2.5 pt-1">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+            <div class="sm:col-span-5">
+              <select id="aiProviderSelect" class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none">
+                <option value="openrouter">OpenRouter Free Router (openrouter/free)</option>
+                <option value="gemini">Google AI Studio (Gemini 4 Hydrogen)</option>
+                <option value="custom">自定义 AI 大模型（OpenAI 兼容接口）</option>
+              </select>
+            </div>
+            <div id="builtinKeyWrap" class="sm:col-span-5">
+              <input type="password" id="aiApiKeyInput" placeholder="输入 API 私钥（仅本地直连官方接口）" class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none" />
+            </div>
+            <div class="sm:col-span-2 flex items-center">
+              <button type="button" id="testConnBtn" class="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold transition">测试连接</button>
+            </div>
+          </div>
+
+          <div id="customModelFields" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div>
+              <label id="lblCustomName" for="customModelName" class="block text-xs text-slate-600 mb-1">模型名称 (Model ID)</label>
+              <input type="text" id="customModelName" placeholder="deepseek-chat / qwen3.8-plus" class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none" />
+            </div>
+            <div>
+              <label id="lblCustomUrl" for="customModelUrl" class="block text-xs text-slate-600 mb-1">接口 URL</label>
+              <input type="url" id="customModelUrl" placeholder="https://api.deepseek.com/v1/chat/completions" class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none" />
+            </div>
+            <div>
+              <label id="lblCustomKey" for="customModelKey" class="block text-xs text-slate-600 mb-1">API 私钥 (Key)</label>
+              <input type="password" id="customModelKey" placeholder="sk-..." class="w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none" />
+            </div>
+          </div>
+
+          <div id="freeKeyHintRow" class="flex items-center justify-between text-xs text-slate-500">
+            <span id="lblKeyHint">密钥仅留存在当前浏览器内存中，点击「测试连接」可验证接口可用性与延迟。</span>
+            <a id="getFreeKeyLink" href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" class="font-semibold text-indigo-600 hover:underline shrink-0">申请免费 Key ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Primary CTA Row -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <span id="lblShortcut" class="text-xs text-slate-400">支持 Ctrl / Cmd + Enter 快捷匹配</span>
+        <button type="button" id="analyzeBtn" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 transition flex items-center gap-2">
+          <span>⚡</span>
+          <span id="analyzeBtnText">开始智能匹配</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Section 2: Results -->
+    <div id="resultsContainer" class="space-y-6">
+      <!-- Diagnosis Banner -->
+      <div id="analysisSummary" class="surface-card rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-indigo-600">
+        <div class="space-y-1 flex-1 min-w-[240px]">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="engineBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-indigo-600 text-white">帕累托精准匹配</span>
+            <span id="detectedArchetype" class="text-sm font-bold text-slate-900">Web 网站</span>
+            <span id="detectedCostBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">预估成本：$0</span>
+          </div>
+          <p id="detectedReason" class="text-xs sm:text-sm text-slate-600 leading-relaxed"></p>
+        </div>
+        <div class="text-right shrink-0">
+          <div id="lblMatchScore" class="text-xs text-slate-500">综合匹配度</div>
+          <div id="matchScoreText" class="text-2xl font-bold text-indigo-600">97%</div>
+        </div>
+      </div>
+
+      <!-- Winner Card -->
+      <div id="winnerCard" class="surface-card rounded-3xl border-2 border-indigo-500/80 overflow-hidden"></div>
+
+      <!-- Alternatives + Radar Chart -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7 space-y-3">
+          <h3 id="lblAltsTitle" class="text-sm font-bold text-slate-800 px-1">🔀 备选与进阶组合</h3>
+          <div id="alternativesList" class="space-y-3"></div>
+        </div>
+
+        <div class="lg:col-span-5 surface-card rounded-3xl p-5 flex flex-col justify-between">
+          <div>
+            <h3 id="lblChartTitle" class="text-sm font-bold text-slate-800 mb-1">📊 四维能力对比</h3>
+            <p id="lblChartSub" class="text-xs text-slate-500 mb-3">代码效果 · 成本优势 · 上手速度 · 生态部署</p>
+          </div>
+          <div class="relative h-72 w-full">
+            <canvas id="comparisonChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Precision Prompt Box -->
+      <div class="surface-card rounded-3xl overflow-hidden">
+        <div class="bg-slate-900 px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 id="lblPromptTitle" class="text-sm font-bold text-white">🛠️ 精准项目启动提示词</h3>
+            <p id="lblPromptSub" class="text-xs text-slate-400">已按所选形态、功能件与架构规范生成，跳转工具后直接粘贴</p>
+          </div>
+          <button type="button" id="copyConfigBtn" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition border border-white/15">📋 复制提示词</button>
+        </div>
+        <pre id="starterConfig" class="bg-slate-950 text-slate-100 p-5 text-xs overflow-x-auto leading-relaxed whitespace-pre-wrap"></pre>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden rounded-xl bg-slate-900 text-white px-4 py-2.5 text-xs sm:text-sm shadow-lg transition"></div>
+
+  <script>
+    // =========================================================================
+    // 0. BILINGUAL I18N DICTIONARY (ZH / EN)
+    // =========================================================================
+    let lang = 'zh';
+    const I18N = {
+      zh: {
+        langBtn: 'EN',
+        syncBtn: '同步最新模型与榜单',
+        syncing: '同步中...',
+        synced: '数据已同步最新',
+        step1: '选择项目形态',
+        step2: '勾选核心功能件（可多选）',
+        step3: '补充具体想法与业务场景',
+        placeholder: '请描述你的核心功能、目标用户或特殊需求...',
+        budgetLbl: '预算策略',
+        budgets: {
+          free: '极客零成本（$0 免费额度优先）',
+          value: '极致性价比（<$10/月 或超低按量）',
+          flagship: '效果至上（不限预算，旗舰模型）'
+        },
+        roleLbl: '开发方式偏好',
+        roles: {
+          auto: '智能推荐（网页端优先/本地可选）',
+          web: '网页端在线开发（免装环境，打开即写）',
+          dev: '本地 IDE / 终端 CLI（完全掌控源码）'
+        },
+        privacyLbl: '网络与部署环境',
+        privacies: {
+          cloud: '全球云端标准 (Global Cloud API)',
+          cn: '亚太 / 中国直连优化 (Direct Access)',
+          local: '本地离线隐私 (Local & Air-Gapped)'
+        },
+        aiToggle: '🧠 开启 AI 深度理解（支持内置免费接口或自定义大模型）',
+        providers: {
+          openrouter: 'OpenRouter Free Router (openrouter/free)',
+          gemini: 'Google AI Studio (Gemini 4 Hydrogen)',
+          custom: '自定义 AI 大模型（OpenAI 兼容接口）'
+        },
+        apiKeyPh: '输入 API 私钥（仅本地直连官方接口）',
+        testConn: '测试连接',
+        testing: '测试中...',
+        customName: '模型名称 (Model ID)',
+        customUrl: '接口 URL',
+        customKey: 'API 私钥 (Key)',
+        keyHint: '密钥仅留存在当前浏览器内存中，点击「测试连接」可验证接口可用性与延迟。',
+        getFreeKey: '申请免费 Key ↗',
+        shortcut: '支持 Ctrl / Cmd + Enter 快捷匹配',
+        analyzeBtn: '开始智能匹配',
+        analyzing: 'AI 深度分析中...',
+        matchScore: '综合匹配度',
+        altsTitle: '🔀 备选与进阶组合',
+        chartTitle: '📊 四维能力对比',
+        chartSub: '代码效果 · 成本优势 · 上手速度 · 生态部署',
+        chartAxes: ['代码效果', '低成本/免费', '上手速度', '生态部署'],
+        promptTitle: '🛠️ 精准项目启动提示词',
+        promptSub: '已按所选形态、功能件与架构规范生成，跳转工具后直接粘贴',
+        copyBtn: '📋 复制提示词',
+        copiedToast: '完整项目启动提示词已复制',
+        winnerBadge: '🏆 最佳推荐组合',
+        toolLabel: '开发工具',
+        modelLabel: '匹配大模型',
+        pricingLbl: '定价：',
+        basisLbl: '最新依据：',
+        costLbl: '成本：',
+        rankLbl: '性能榜单：',
+        jumpTool: '🚀 点击跳转',
+        jumpWeb: '🌐 直接进入网页端开发',
+        jumpModel: '🔑 点击跳转',
+        altLabel: '备选',
+        altWeb: '网页端 ↗',
+        altTool: '工具 ↗',
+        altModel: '模型 ↗',
+        estPrefix: '预估成本：',
+        engineLocal: '帕累托精准匹配',
+        types: {
+          web: 'Web 网站', saas: 'SaaS 全栈应用', extension: '浏览器插件',
+          desktop: '桌面软件', android: 'Android 移动应用', mobile_cross: 'iOS / 跨平台 App',
+          miniprogram: '小程序', cli: '自动化脚本 / CLI', agent: 'AI Agent / 工作流'
+        },
+        mods: {
+          frontend: '前端界面 (UI/UX)', backend: '后端服务', database: '数据库存储',
+          auth: '用户登录鉴权', payment: '支付订阅', api: '第三方 API 集成',
+          ai: 'AI 能力接入', data: '数据采集 / 处理', local: '本地离线 / 隐私'
+        }
+      },
+      en: {
+        langBtn: '中文',
+        syncBtn: 'Sync Live Models',
+        syncing: 'Syncing...',
+        synced: 'Live Data Synced',
+        step1: 'Select Project Type',
+        step2: 'Select Core Modules (Multi-select)',
+        step3: 'Describe Your Idea & Requirements',
+        placeholder: 'Describe your core features, target users, or special constraints...',
+        budgetLbl: 'Budget Strategy',
+        budgets: {
+          free: 'Zero-Cost ($0 Free Tier First)',
+          value: 'Best ROI (<$10/mo or Ultra-Low API)',
+          flagship: 'Peak Quality (Unlimited Budget, Flagship)'
+        },
+        roleLbl: 'Workflow Preference',
+        roles: {
+          auto: 'Smart Auto (Web-First / Local Optional)',
+          web: 'Browser-Based (Zero Setup, Instant Deploy)',
+          dev: 'Local IDE / Terminal CLI (Full Code Control)'
+        },
+        privacyLbl: 'Network & Deployment Region',
+        privacies: {
+          cloud: 'Global Cloud API (Standard)',
+          cn: 'APAC / China Direct Access',
+          local: 'Local & Air-Gapped (100% Offline)'
+        },
+        aiToggle: '🧠 Enable AI Deep Understanding (Free Built-in or Custom LLM)',
+        providers: {
+          openrouter: 'OpenRouter Free Router (openrouter/free)',
+          gemini: 'Google AI Studio (Gemini 4 Hydrogen)',
+          custom: 'Custom LLM (OpenAI-Compatible API)'
+        },
+        apiKeyPh: 'Enter API Key (direct browser-to-API only)',
+        testConn: 'Test',
+        testing: 'Testing...',
+        customName: 'Model ID',
+        customUrl: 'Endpoint URL',
+        customKey: 'API Key',
+        keyHint: 'Keys stay in memory only. Click Test to verify connectivity and latency.',
+        getFreeKey: 'Get Free Key ↗',
+        shortcut: 'Press Ctrl / Cmd + Enter to match',
+        analyzeBtn: 'Find Best AI Stack',
+        analyzing: 'Analyzing...',
+        matchScore: 'Match Score',
+        altsTitle: '🔀 Runner-Up & Alternative Stacks',
+        chartTitle: '📊 4-Axis Capability Radar',
+        chartSub: 'Code Quality · Cost Efficiency · Ease of Use · Ecosystem',
+        chartAxes: ['Code Quality', 'Cost Efficiency', 'Ease of Use', 'Ecosystem'],
+        promptTitle: '🛠️ Precision Starter Prompt',
+        promptSub: 'Tailored to your selected type, modules, and zero-cost architecture',
+        copyBtn: '📋 Copy Prompt',
+        copiedToast: 'Tailored starter prompt copied!',
+        winnerBadge: '🏆 Optimal Stack',
+        toolLabel: 'Dev Tool',
+        modelLabel: 'Matched LLM',
+        pricingLbl: 'Pricing: ',
+        basisLbl: 'Verified Basis: ',
+        costLbl: 'Cost: ',
+        rankLbl: 'Benchmark: ',
+        jumpTool: '🚀 Open',
+        jumpWeb: '🌐 Open Web Workspace',
+        jumpModel: '🔑 Open',
+        altLabel: 'Option',
+        altWeb: 'Web IDE ↗',
+        altTool: 'Tool ↗',
+        altModel: 'Model ↗',
+        estPrefix: 'Est. Cost: ',
+        engineLocal: 'Pareto Optimal Engine',
+        types: {
+          web: 'Website', saas: 'Full-Stack SaaS', extension: 'Browser Extension',
+          desktop: 'Desktop App', android: 'Android App', mobile_cross: 'iOS / Cross-Platform',
+          miniprogram: 'Mini Program', cli: 'Automation / CLI', agent: 'AI Agent / Workflow'
+        },
+        mods: {
+          frontend: 'Frontend UI/UX', backend: 'Backend API', database: 'Database',
+          auth: 'Auth / Login', payment: 'Payments', api: '3rd-Party APIs',
+          ai: 'AI Integration', data: 'Data / Scraping', local: 'Local / Privacy'
+        }
+      }
+    };
+
+    // =========================================================================
+    // 1. LATEST 2026-11-19 VERIFIED KNOWLEDGE BASE
+    // =========================================================================
+    const TOOLS = [
+      { id: 'antigravity', name: 'Google Antigravity', categoryLabel: 'Agent-First IDE & CLI', categoryLabelEn: 'Agent-First IDE & CLI', url: 'https://antigravity.google/', isWebBased: false, pricing: '免费版 $0（无限 Tab 补全 + 每周 Agent 额度）| AI Pro $19.99/月', pricingEn: 'Free $0 (Unlimited Tab + Weekly Agent Quota) | AI Pro $19.99/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 95, costScore: 98, easeScore: 87, ecosystemScore: 94, evalBasis: '2026-11 标配 Gemini 4 Hydrogen（免费层可用）及 /swarm 多 Agent 协作，Pro 版解锁 Argon 与 Opus 5.5。', evalBasisEn: 'Includes Gemini 4 Hydrogen on Free tier & /swarm agents; Pro unlocks Argon & Claude Opus 5.5.', summary: 'Google 主力 Agent 开发平台（IDE + agy CLI），个人免费版即享无限 Tab 补全与 Gemini 4 Hydrogen 每周额度。', summaryEn: 'Google agentic IDE + agy CLI with unlimited free Tab completions and weekly Gemini 4 Hydrogen agent quota.', tags: ['web', 'saas', 'extension', 'desktop', 'android', 'mobile_cross', 'cli', 'agent'] },
+      { id: 'ai-studio-build', name: 'Google AI Studio (Build)', categoryLabel: '网页端零配置全栈生成', categoryLabelEn: 'Web Zero-Setup Full-Stack', url: 'https://aistudio.google.com/apps', isWebBased: true, webUrl: 'https://aistudio.google.com/apps', pricing: '免费版 $0（内置 Gemini 4 Hydrogen + Firebase 后端）', pricingEn: 'Free $0 (Gemini 4 Hydrogen + Firebase Backend)', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 92, costScore: 100, easeScore: 97, ecosystemScore: 93, evalBasis: '打开网页即可用 Gemini 4 Hydrogen 生成全栈应用并原生打通 Firebase 免费数据库与鉴权。', evalBasisEn: 'Browser-native full-stack builder powered by Gemini 4 Hydrogen with integrated Firebase Auth & DB.', summary: 'Google 官方网页端应用构建器，无需本地装环境，免费直接生成带后端的 Web 与 AI 应用。', summaryEn: 'Zero-setup browser app builder by Google for instant full-stack web and AI apps.', tags: ['web', 'saas', 'agent', 'miniprogram'] },
+      { id: 'firebase-studio', name: 'Google Firebase Studio', categoryLabel: '云端全栈 & 移动工作区', categoryLabelEn: 'Cloud Full-Stack & Mobile IDE', url: 'https://firebase.studio/', isWebBased: true, webUrl: 'https://firebase.studio/', pricing: '免费版 $0（云端 IDE + Firebase Spark 免费数据库/托管）', pricingEn: 'Free $0 (Cloud IDE + Firebase Spark Free Tier)', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 90, costScore: 97, easeScore: 93, ecosystemScore: 94, evalBasis: '支持 Web 与 Flutter 跨平台移动应用，云端开箱集成 Firestore 数据库、登录与免费托管。', evalBasisEn: 'Supports Web & Flutter cross-platform mobile apps with built-in Firestore, Auth, and free hosting.', summary: 'Google 云端网页版全栈 IDE，支持 Web、Android/Flutter 与后端服务一体化免费开发部署。', summaryEn: 'Cloud workspace integrating Web & Flutter development with free Firebase backend services.', tags: ['web', 'saas', 'android', 'mobile_cross'] },
+      { id: 'bolt', name: 'Bolt.new', categoryLabel: '网页端全栈原型 Builder', categoryLabelEn: 'Browser Full-Stack Builder', url: 'https://bolt.new/', isWebBased: true, webUrl: 'https://bolt.new/', pricing: '免费版 $0（30万 Tokens/天，100万/月，含托管）| Pro $18/月', pricingEn: 'Free $0 (300K/day, 1M/mo + Hosting) | Pro $18/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 89, costScore: 95, easeScore: 98, ecosystemScore: 91, evalBasis: '免费额度高达每月 100 万 Tokens，浏览器内置完整 Node 运行时与数据库支持。', evalBasisEn: 'Generous 1M free tokens/month with in-browser Node runtime and one-click hosting.', summary: '浏览器端直接运行完整全栈环境并一键托管上线，适合快速构建 Web 网站与 SaaS 原型。', summaryEn: 'In-browser full-stack environment for rapid web and SaaS prototyping with instant deployment.', tags: ['web', 'saas', 'extension', 'mobile_cross'] },
+      { id: 'lovable', name: 'Lovable', categoryLabel: '网页端全栈 SaaS 生成器', categoryLabelEn: 'Web Full-Stack SaaS Builder', url: 'https://lovable.dev/', isWebBased: true, webUrl: 'https://lovable.dev/', pricing: '免费版 $0（5次/天，最高30次/月，含 Git 同步）| Pro $25/月', pricingEn: 'Free $0 (5/day, 30/mo + Git Sync) | Pro $25/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 92, costScore: 89, easeScore: 97, ecosystemScore: 93, evalBasis: 'UI 审美与 Supabase 数据库/登录/Stripe 支付集成度高，免费版支持 Git 同步。', evalBasisEn: 'Polished UI with native Supabase DB/Auth & Stripe integration, plus free GitHub sync.', summary: '网页端 Prompt 生成高颜值全栈 SaaS 应用的标杆，免费支持双向 GitHub 同步。', summaryEn: 'Prompt-to-full-stack web app builder with clean design and two-way Git sync.', tags: ['web', 'saas'] },
+      { id: 'v0', name: 'v0 by Vercel', categoryLabel: '网页端 React/Next.js UI', categoryLabelEn: 'Web React / Next.js UI Builder', url: 'https://v0.dev/', isWebBased: true, webUrl: 'https://v0.dev/', pricing: '免费版 $0（每月 $5 额度，7条/天，含 Vercel 部署）| Plus $30/月', pricingEn: 'Free $0 ($5/mo credits, 7 msg/day + Vercel Deploy) | Plus $30/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 93, costScore: 90, easeScore: 96, ecosystemScore: 95, evalBasis: 'React / Next.js / Tailwind UI 组件一次成型率行业顶尖，免费版含 Vercel 托管与 GitHub 同步。', evalBasisEn: 'Top-tier React/Next.js UI quality with visual editing, GitHub sync, and Vercel deploy.', summary: 'Vercel 官方网页端 UI 与前端应用生成器，适合网站、仪表盘与交互原型。', summaryEn: 'Official Vercel UI and Next.js generator for polished frontends and landing pages.', tags: ['web', 'saas'] },
+      { id: 'replit', name: 'Replit', categoryLabel: '网页端云 IDE + 数据库', categoryLabelEn: 'Cloud IDE + Built-in DB', url: 'https://replit.com/', isWebBased: true, webUrl: 'https://replit.com/', pricing: 'Starter 免费版（1个在线项目+内置数据库）| Core $20/月', pricingEn: 'Starter Free (1 Live App + Built-in DB) | Core $20/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 87, costScore: 88, easeScore: 94, ecosystemScore: 91, evalBasis: '浏览器内集齐多语言环境、Postgres 数据库与部署，支持 Python/Web/React Native。', evalBasisEn: 'All-in-one cloud IDE with shell, Postgres database, and live hosting.', summary: '浏览器内开箱即用的云端全栈工作空间，支持脚本、网站与移动原型。', summaryEn: 'Browser-based cloud workspace with built-in database and deployment.', tags: ['web', 'saas', 'cli', 'mobile_cross', 'agent'] },
+      { id: 'cline', name: 'Cline', categoryLabel: 'VS Code 开源 Agent', categoryLabelEn: 'Open-Source VS Code Agent', url: 'https://docs.cline.bot/getting-started/free-models', isWebBased: false, pricing: '插件 $0 开源 | 内置免费模型 + BYOK | ClinePass $9.99/月', pricingEn: '$0 Open Source | Built-in Free Models + BYOK | ClinePass $9.99/mo', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 93, costScore: 100, easeScore: 80, ecosystemScore: 92, evalBasis: 'Apache 2.0 开源零席位费，可自由挂载 OpenRouter 免费路由、DeepSeek V4.1 或本地 Ollama。', evalBasisEn: 'Apache 2.0 zero-seat agent supporting free models, BYOK APIs, and local Ollama.', summary: '最受欢迎的 VS Code 自主编程 Agent，内置免费模型并支持任意 BYOK 与本地离线模型。', summaryEn: 'Autonomous VS Code coding agent with zero markup, BYOK, and local Ollama support.', tags: ['web', 'saas', 'extension', 'desktop', 'android', 'mobile_cross', 'miniprogram', 'cli', 'agent'] },
+      { id: 'opencode', name: 'OpenCode', categoryLabel: '开源终端 TUI / IDE Agent', categoryLabelEn: 'Open-Source Terminal Agent', url: 'https://opencode.ai/', isWebBased: false, pricing: 'MIT 开源 $0 | 支持 75+ 模型商 BYOK / 本地模型 | Go $10/月可选', pricingEn: 'MIT $0 | 75+ Providers BYOK / Local | Optional Go $10/mo', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 93, costScore: 100, easeScore: 76, ecosystemScore: 90, evalBasis: '209k+ GitHub Stars，MIT 开源，支持 75+ 模型商零加价接入与本地模型。', evalBasisEn: '209k+ GitHub Stars, MIT licensed, connects 75+ model providers or local weights.', summary: '极客圈最火的 MIT 开源终端 Agent，原生支持多模型路由与本地模型。', summaryEn: 'Popular MIT open-source terminal coding agent with 75+ provider integrations.', tags: ['cli', 'desktop', 'android', 'agent'] },
+      { id: 'kilo-code', name: 'Kilo Code', categoryLabel: '开源全端 Agent (IDE/CLI)', categoryLabelEn: 'Open-Source Multi-Surface Agent', url: 'https://kilo.ai/', isWebBased: false, pricing: 'MIT 开源 $0（免费模型 / BYOK / 本地）| Gateway 零加价按量', pricingEn: 'MIT $0 (Free / BYOK / Local) | Zero-Markup Gateway', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 93, costScore: 98, easeScore: 85, ecosystemScore: 92, evalBasis: '覆盖 VS Code/JetBrains/CLI/Neovim，支持 Git Worktree 多 Agent 并行与快照回滚。', evalBasisEn: 'Works across VS Code, JetBrains, CLI & Neovim with Git worktrees and checkpoints.', summary: '支持 Code/Plan/Debug 多模式分工、Git 快照回滚与 500+ 模型零加价接入。', summaryEn: 'Multi-mode open-source agent with Git checkpoints and 500+ zero-markup models.', tags: ['web', 'saas', 'extension', 'desktop', 'android', 'mobile_cross', 'cli', 'agent'] },
+      { id: 'trae', name: 'TRAE AI IDE', categoryLabel: 'AI 原生 IDE / TraeWork Web', categoryLabelEn: 'AI-Native IDE & TraeWork Web', url: 'https://www.trae.ai/', isWebBased: true, webUrl: 'https://www.trae.ai/work', pricing: '免费版 $0 | 付费按 Token 阶梯 $3/月起', pricingEn: 'Free Tier $0 | Token-Based Plans from $3/mo', freeTier: true, cnFriendly: true, supportsLocal: false, supportsBYOK: true, qualityScore: 90, costScore: 96, easeScore: 92, ecosystemScore: 88, evalBasis: '直连稳定、中文语义友好，提供桌面 IDE 与 TraeWork Web 端，付费门槛 $3/月起。', evalBasisEn: 'Low entry pricing ($3/mo), desktop + TraeWork Web mode, and custom API support.', summary: '提供桌面 IDE 与网页端 TraeWork，支持 SOLO 自主模式与自定义 API。', summaryEn: 'AI IDE with autonomous SOLO mode, custom API support, and TraeWork Web.', tags: ['web', 'saas', 'miniprogram', 'extension', 'desktop'] },
+      { id: 'aider', name: 'Aider', categoryLabel: '开源终端 Git 编程助手', categoryLabelEn: 'Git-Native Terminal Pair Programmer', url: 'https://aider.chat/', isWebBased: false, pricing: '软件 $0 开源 | 仅支付自带 API Token（可接免费/本地模型）', pricingEn: '$0 Open Source | BYOK Token Cost Only', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 90, costScore: 99, easeScore: 73, ecosystemScore: 85, evalBasis: 'Git Diff 自动提交与 RepoMap 上下文压缩极省 Token。', evalBasisEn: 'RepoMap context compression & auto Git commits minimize token spend.', summary: '终端 Git 原生编程标杆，RepoMap 技术大幅节省 Token 消耗，适合脚本与后端工程。', summaryEn: 'Terminal pair programmer with RepoMap context optimization for scripts & backends.', tags: ['cli', 'desktop', 'agent'] },
+      { id: 'continue-dev', name: 'Continue.dev', categoryLabel: '开源 IDE 插件 & CLI', categoryLabelEn: 'Open-Source IDE & CLI', url: 'https://www.continue.dev/', isWebBased: false, pricing: 'Apache 2.0 插件 $0 | 支持 Ollama 本地模型与任意 API', pricingEn: 'Apache 2.0 $0 | Local Ollama & Any API', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 86, costScore: 98, easeScore: 84, ecosystemScore: 86, evalBasis: 'Apache 2.0 开源，VS Code 与 JetBrains 双端覆盖，本地模型配置成熟。', evalBasisEn: 'Mature Apache 2.0 extensions for VS Code & JetBrains with local Ollama.', summary: '支持 VS Code 与 JetBrains 的开源 AI 底座，结合本地 Ollama 实现零费用私有化开发。', summaryEn: 'Open-source coding assistant for VS Code and JetBrains with local model support.', tags: ['desktop', 'android', 'cli'] },
+      { id: 'zed', name: 'Zed Editor', categoryLabel: 'Rust 原生极速编辑器', categoryLabelEn: 'High-Speed Rust Editor', url: 'https://zed.dev/', isWebBased: false, pricing: '编辑器 $0 开源 | 内置 AI 面板支持 BYOK 与本地模型', pricingEn: '$0 Open Source | Built-in AI Panel w/ BYOK & Local', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 88, costScore: 95, easeScore: 85, ecosystemScore: 84, evalBasis: 'Rust 编写响应极快，内置 Agent 面板可挂载免费 API 或本地模型。', evalBasisEn: 'Ultra-fast native Rust editor with built-in BYOK and local AI panel.', summary: 'Rust 原生极速编辑器，内置 AI 协作面板且不捆绑高价订阅。', summaryEn: 'Blazing-fast Rust code editor with native AI agent panel and BYOK.', tags: ['desktop', 'cli', 'web'] },
+      { id: 'copilot', name: 'GitHub Copilot', categoryLabel: '主流 IDE 插件', categoryLabelEn: 'Mainstream IDE Assistant', url: 'https://github.com/features/copilot/plans', isWebBased: false, pricing: 'Free $0 | Pro $10/月（无限补全+1500 AI Credits）', pricingEn: 'Free $0 | Pro $10/mo (Unlimited Completions + 1,500 Credits)', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: true, qualityScore: 90, costScore: 90, easeScore: 94, ecosystemScore: 96, evalBasis: '付费版保留无限行内补全；学生与开源维护者可免费获取 Pro。', evalBasisEn: 'Unlimited inline completions on Pro ($10/mo); free Pro for verified students & OSS.', summary: '生态稳定的主流插件，免费版可体验基础对话与补全，Pro 仅 $10/月。', summaryEn: 'Widely adopted IDE assistant with free tier and affordable $10/mo Pro plan.', tags: ['web', 'saas', 'extension', 'desktop', 'android', 'mobile_cross'] },
+      { id: 'cursor', name: 'Cursor', categoryLabel: 'AI-First IDE', categoryLabelEn: 'AI-First IDE', url: 'https://cursor.com/pricing', isWebBased: false, pricing: 'Free 入门额度 | Pro $20/月 | Pro+ $60/月', pricingEn: 'Free Starter | Pro $20/mo | Pro+ $60/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: true, qualityScore: 95, costScore: 76, easeScore: 93, ecosystemScore: 95, evalBasis: 'Tab 预测与多文件 Composer 手感顶尖，重度使用需 $20/月订阅。', evalBasisEn: 'Industry-leading Tab prediction and multi-file Composer workflow.', summary: '交互手感与多文件编辑体验极佳的 AI IDE。', summaryEn: 'Polished AI-first IDE with fast Tab autocomplete and multi-file agent editing.', tags: ['web', 'saas', 'extension', 'desktop', 'mobile_cross'] },
+      { id: 'windsurf', name: 'Devin Desktop (Windsurf)', categoryLabel: 'Agent Command Center IDE', categoryLabelEn: 'Agent Command Center IDE', url: 'https://windsurf.com/', isWebBased: false, pricing: 'Free $0（无限 Tab 补全 + 每周额度）| Pro $20/月', pricingEn: 'Free $0 (Unlimited Tab + Weekly Quota) | Pro $20/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 92, costScore: 87, easeScore: 90, ecosystemScore: 90, evalBasis: '免费版保留无限 Tab 补全，支持本地 IDE 与云端 Agent 协同。', evalBasisEn: 'Unlimited Tab completions on all tiers including Free, plus cloud Devin integration.', summary: 'Agent 指挥中心 IDE，全计划提供无限 Tab 补全与跨会话记忆。', summaryEn: 'Agentic IDE combining local editing with cloud agent orchestration.', tags: ['web', 'saas', 'desktop'] },
+      { id: 'claude-code', name: 'Claude Code', categoryLabel: '终端旗舰自主 Agent', categoryLabelEn: 'Flagship Terminal Agent', url: 'https://www.anthropic.com/claude-code', isWebBased: false, pricing: '无免费版 | 随 Claude Pro $20/月起 或 API 按量', pricingEn: 'Paid Only | Claude Pro $20/mo+ or API Pay-as-you-go', freeTier: false, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 99, costScore: 60, easeScore: 82, ecosystemScore: 93, evalBasis: 'Terminal-Bench 4.0 搭配 Opus 5.5 达 64.8% 榜首，复杂重构一次成功率最高。', evalBasisEn: 'Leads Terminal-Bench 4.0 (64.8% w/ Opus 5.5) for complex multi-file engineering.', summary: '复杂代码库理解与跨文件重构天花板，适合预算充足的大型工程。', summaryEn: 'Top-tier autonomous terminal agent for complex codebases and refactoring.', tags: ['web', 'desktop', 'saas', 'extension', 'cli', 'agent'] },
+      { id: 'codex-cli', name: 'OpenAI Codex', categoryLabel: 'OpenAI 官方编程 Agent', categoryLabelEn: 'OpenAI Coding Agent (Web/CLI)', url: 'https://openai.com/codex/', isWebBased: true, webUrl: 'https://chatgpt.com/codex', pricing: 'ChatGPT Free 有限体验 | Go $8/月 | Plus $20/月', pricingEn: 'Free Limited | Go $8/mo | Plus $20/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: true, qualityScore: 95, costScore: 82, easeScore: 88, ecosystemScore: 91, evalBasis: '支持网页端、桌面端与 CLI，搭配 GPT-6.1 Sol 在低缺陷率上表现突出。', evalBasisEn: 'Runs in browser, desktop, and CLI with ultra-low bug rate on GPT-6.1 Sol.', summary: 'OpenAI 官方编程 Agent，覆盖网页端任务沙盒、桌面端与 CLI。', summaryEn: 'Official OpenAI coding agent across web sandbox, desktop, and CLI.', tags: ['web', 'saas', 'cli', 'agent'] },
+      { id: 'kiro', name: 'AWS Kiro', categoryLabel: '规格驱动 AI IDE & CLI', categoryLabelEn: 'Spec-Driven IDE & CLI', url: 'https://kiro.dev/pricing/', isWebBased: false, pricing: 'Free $0（50 Credits/月）| Pro $20/月', pricingEn: 'Free $0 (50 Credits/mo) | Pro $20/mo', freeTier: true, cnFriendly: false, supportsLocal: false, supportsBYOK: false, qualityScore: 91, costScore: 85, easeScore: 87, ecosystemScore: 89, evalBasis: 'Spec-driven 工作流先生成架构设计再写代码，减少大型项目返工。', evalBasisEn: 'Spec-driven workflow (requirements -> design -> tasks) reduces rework.', summary: 'AWS 规格驱动开发平台，非常适合中大型规范化项目。', summaryEn: 'AWS spec-driven IDE and CLI built for structured software engineering.', tags: ['saas', 'desktop', 'cli'] },
+      { id: 'jetbrains-ai', name: 'JetBrains AI Assistant', categoryLabel: 'JetBrains / Android Studio 原生', categoryLabelEn: 'JetBrains / Android Studio Native', url: 'https://www.jetbrains.com/ai/', isWebBased: false, pricing: '免费版 $0（无限本地补全 + 支持 Ollama）| AI Pro $10/月', pricingEn: 'Free $0 (Unlimited Local + Ollama) | AI Pro $10/mo', freeTier: true, cnFriendly: true, supportsLocal: true, supportsBYOK: true, qualityScore: 90, costScore: 92, easeScore: 90, ecosystemScore: 92, evalBasis: '原生支持 IntelliJ / Android Studio / PyCharm，免费版可无限本地补全并挂载 Ollama。', evalBasisEn: 'Deeply integrated with Android Studio, IntelliJ & PyCharm with free local completions.', summary: 'Android Studio / IntelliJ / PyCharm 原生集成，原生 Android 与 Java/Kotlin 开发首选。', summaryEn: 'Native AI for Android Studio, IntelliJ, and PyCharm with local model support.', tags: ['android', 'desktop', 'mobile_cross'] }
+    ];
+
+    const MODELS = [
+      { id: 'gemini-4-hydrogen', name: 'Gemini 4 Hydrogen', provider: 'Google AI Studio', url: 'https://aistudio.google.com/docs/models', pricing: 'Free Tier $0（Antigravity 与 Gemini API 免费层可用）| 付费 $1.50/$7.50 per 1M', pricingEn: 'Free Tier $0 (Antigravity & Gemini API) | Paid $1.50/$7.50 per 1M', isFree: true, cnFriendly: false, isLocal: false, rankBadge: 'AA Index 51 · 11月免费主力', rankBadgeEn: 'AA Index 51 · Free Tier', qualityScore: 94, costScore: 99, evalBasis: '2026-11-12 发布，全面取代 3.8 Flash；AA Index 51（超越 Argon），1M 上下文 + 4 档思考。', evalBasisEn: 'Released Nov 12, 2026; AA Index 51, 1M context, 4 thinking levels on Free Tier.', summary: 'Google 2026-11 最新免费编码与 Agent 主力模型，速度极快且推理力大幅跃升。', summaryEn: 'Google fast agentic coding model available on the free tier with 1M context.' },
+      { id: 'openrouter-free', name: 'OpenRouter Free Router', provider: 'OpenRouter', url: 'https://openrouter.ai/collections/free-models', pricing: '$0 / 1M Tokens（自动路由至当前最新免费模型）', pricingEn: '$0 / 1M Tokens (Auto-routes to active free models)', isFree: true, cnFriendly: false, isLocal: false, rankBadge: '实时免费路由 · 550B 级', rankBadgeEn: 'Live Free Router · Up to 550B', qualityScore: 89, costScore: 100, evalBasis: '自动路由与故障转移至 Nemotron 3 Ultra 550B 等最新免费模型，零成本适配开源插件。', evalBasisEn: 'Zero-cost router with automatic fallback across 550B-class free models.', summary: '零成本接入开源强推理与代码模型的统一网关，适配 Cline / OpenCode / Kilo Code / Aider。', summaryEn: 'Unified $0 gateway for open-source coding & reasoning models in BYOK agents.' },
+      { id: 'deepseek-v4-flash', name: 'DeepSeek V4.1 Flash', provider: 'DeepSeek', url: 'https://platform.deepseek.com/', pricing: '缓存命中 $0.003/M · 错峰 $0.15/$0.60 per 1M', pricingEn: 'Cached $0.003/M · Off-peak $0.15/$0.60 per 1M', isFree: false, cnFriendly: true, isLocal: false, rankBadge: 'SWE-bench 79.0% · 缓存最低价', rankBadgeEn: 'SWE-bench 79.0% · Ultra-Low Cache', qualityScore: 92, costScore: 97, evalBasis: 'SWE-bench Verified 达 79.0%，Agent 重复上下文缓存命中仅 $0.003/M。', evalBasisEn: '79.0% SWE-bench Verified with $0.003/M cached input for agent loops.', summary: 'Agent 场景性价比极高，OpenAI 兼容接口，亚太/中国直连稳定。', summaryEn: 'Ultra-low-cost coding model with OpenAI-compatible API and deep cache discounts.' },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', provider: 'DeepSeek', url: 'https://platform.deepseek.com/', pricing: '缓存 $0.022-$0.044/M · 输出 $1.98-$3.96/M', pricingEn: 'Cached $0.022-$0.044/M · Output $1.98-$3.96/M', isFree: false, cnFriendly: true, isLocal: false, rankBadge: 'SWE-bench Agent 96.4%', rankBadgeEn: 'SWE-bench Agent 96.4%', qualityScore: 96, costScore: 92, evalBasis: 'Vals AI 评测搭配 Mini-SWE-agent 达 96.4%，价格仅为海外旗舰的 1/10。', evalBasisEn: '96.4% on SWE-bench Verified (Mini-SWE-agent) at a fraction of frontier pricing.', summary: '高性价比旗舰推理与编程模型，适合复杂架构设计与高难度 Bug 修复。', summaryEn: 'Frontier-grade coding and reasoning at ~1/10th the cost of US flagships.' },
+      { id: 'qwen-3.8-flash', name: 'Qwen3.8 / 3.7 Flash', provider: 'Alibaba Cloud', url: 'https://bailian.console.aliyun.com/', pricing: 'Qwen3.7 ~$0.03/$0.11/M | Qwen3.8 ~$0.11/$0.39/M（新客免费额度）', pricingEn: 'Qwen3.7 ~$0.03/$0.11/M | Qwen3.8 ~$0.11/$0.39/M (Free Trial)', isFree: true, cnFriendly: true, isLocal: false, rankBadge: 'SWE-bench 78.8% · 极低单价', rankBadgeEn: 'SWE-bench 78.8% · Lowest List Price', qualityScore: 91, costScore: 98, evalBasis: '官方公开 API 单价最低梯队，新客自带百万级免费 Tokens，前端与中文理解极稳。', evalBasisEn: 'Among the lowest official API rates globally with generous free trial tokens.', summary: '直连速度极快且几乎免费的超低价代码模型，支持 128K 输出。', summaryEn: 'Ultra-affordable fast coding model with 128K output and free starter quota.' },
+      { id: 'glm-5.3-flash', name: 'GLM-5.3-Flash', provider: 'Zhipu AI', url: 'https://open.bigmodel.cn/', pricing: '约 $0.11 / $0.39 per 1M（含免费体验额度）', pricingEn: '~$0.11 / $0.39 per 1M (Free Trial Included)', isFree: true, cnFriendly: true, isLocal: false, rankBadge: '高并发 Agent 模型', rankBadgeEn: 'High-Concurrency Agent', qualityScore: 89, costScore: 96, evalBasis: '提供超低价与高并发工具调用能力，直连无需代理。', evalBasisEn: 'Low-cost tool calling and long-context agent execution.', summary: '支持长上下文与 Agent 调用的高性价比模型。', summaryEn: 'Cost-efficient long-context model for agent workflows.' },
+      { id: 'minimax-m3.1-flash', name: 'MiniMax M3.1 Flash / M2.5', provider: 'MiniMax', url: 'https://platform.minimaxi.com/', pricing: 'M3.1 Flash $0.80 / $1.60 per 1M · 127 tok/s', pricingEn: 'M3.1 Flash $0.80 / $1.60 per 1M · 127 tok/s', isFree: false, cnFriendly: true, isLocal: false, rankBadge: 'SWE-bench 80.2% · 127 tok/s', rankBadgeEn: 'SWE-bench 80.2% · 127 tok/s', qualityScore: 91, costScore: 89, evalBasis: 'M2.5 在 SWE-bench Verified 达 80.2%，M3.1 Flash 吞吐高达 127 tok/s。', evalBasisEn: '80.2% SWE-bench Verified (M2.5) and 127 tok/s fast streaming.', summary: '高吞吐、低延迟的编程与 Agent 模型。', summaryEn: 'High-throughput coding model for responsive multi-turn iteration.' },
+      { id: 'groq-free', name: 'Groq Free Tier', provider: 'Groq', url: 'https://console.groq.com/docs/models', pricing: '免费层 $0（GPT-OSS 120B 每日 1,000 次请求）', pricingEn: 'Free $0 (1,000 req/day on GPT-OSS 120B)', isFree: true, cnFriendly: false, isLocal: false, rankBadge: '每日 1,000 次免费', rankBadgeEn: '1,000 Free Req/Day', qualityScore: 88, costScore: 98, evalBasis: '每日 1,000 次免费请求且 LPU 推理速度极快。', evalBasisEn: '1,000 daily free requests with ultra-fast LPU inference.', summary: '推理速度极快的免费 API，适合代码补全与快速迭代。', summaryEn: 'Ultra-fast free API tier ideal for autocomplete and rapid prototyping.' },
+      { id: 'ollama-local', name: 'Ollama Local Models', provider: 'Ollama (Local)', url: 'https://ollama.com/', pricing: '$0 永久免费（100% 本地离线）', pricingEn: '$0 Forever (100% Offline Local)', isFree: true, cnFriendly: true, isLocal: true, rankBadge: '100% 本地隐私零费用', rankBadgeEn: '100% Air-Gapped Privacy', qualityScore: 85, costScore: 100, evalBasis: '零 API 费用、零网络依赖、代码绝对不出本机/内网。', evalBasisEn: 'Zero API cost, zero cloud dependency; code never leaves your machine.', summary: '一行命令本地运行 Qwen3.8 / DeepSeek / Llama 开源模型，实现完全离线开发。', summaryEn: 'Run open-weight coding models locally with one command for total privacy.' },
+      { id: 'gemini-4-carbon', name: 'Gemini 4 Carbon', provider: 'Google', url: 'https://aistudio.google.com/docs/whats-new-gemini-4-carbon', pricing: '$2.00 / $10.00 per 1M（11/30前优惠价，1M 上下文）', pricingEn: '$2.00 / $10.00 per 1M (Intro through Nov 30, 1M ctx)', isFree: false, cnFriendly: false, isLocal: false, rankBadge: 'AA Index 60 · 1M 上下文', rankBadgeEn: 'AA Index 60 · 1M Context', qualityScore: 97, costScore: 82, evalBasis: '2026-11-10 发布，AA Intelligence Index 达 60，1M 超大上下文适合全仓理解。', evalBasisEn: 'Released Nov 10, 2026; AA Index 60 with 1M context for full-repo reasoning.', summary: 'Google 2026-11 旗舰模型，适合大型全栈工程与复杂多步骤推理。', summaryEn: 'Google flagship reasoning model for large codebases and multimodal engineering.' },
+      { id: 'claude-sonnet-5.5', name: 'Claude Sonnet 5.5', provider: 'Anthropic', url: 'https://www.anthropic.com/pricing', pricing: '$2.00 / $10.00 per 1M Tokens', pricingEn: '$2.00 / $10.00 per 1M Tokens', isFree: false, cnFriendly: false, isLocal: false, rankBadge: 'Terminal-Bench 61.8%', rankBadgeEn: 'Terminal-Bench 61.8%', qualityScore: 96, costScore: 78, evalBasis: 'Terminal-Bench 4.0 达 61.8%，工程代码审美与一次通过率极高。', evalBasisEn: '61.8% on Terminal-Bench 4.0 with strong full-stack reliability.', summary: '全栈工程与复杂前端开发的主力旗舰模型。', summaryEn: 'Workhorse engineering model for full-stack apps and clean frontend UI.' },
+      { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol / GPT-6 Astra', provider: 'OpenAI', url: 'https://openai.com/api/pricing/', pricing: 'ChatGPT Plus $20/月 (Codex) 或 API 按量', pricingEn: 'ChatGPT Plus $20/mo (Codex) or API PAYG', isFree: false, cnFriendly: false, isLocal: false, rankBadge: 'BenchLM 2026-11 Top 5', rankBadgeEn: 'BenchLM Nov 2026 Top 5', qualityScore: 98, costScore: 70, evalBasis: 'BenchLM 2026-11 榜单前五（84.91-84.98），Bug Bench 缺陷率全网最低梯队。', evalBasisEn: 'Top 5 on BenchLM Nov 2026 with industry-low production bug rates.', summary: 'OpenAI 2026-11 最新低缺陷工程旗舰模型，适合核心业务开发。', summaryEn: 'OpenAI flagship coding model engineered for minimal bug rates.' },
+      { id: 'claude-fable-5.2', name: 'Claude Fable 5.2', provider: 'Anthropic', url: 'https://www.anthropic.com/pricing', pricing: '$8.00 / $40.00 per 1M Tokens', pricingEn: '$8.00 / $40.00 per 1M Tokens', isFree: false, cnFriendly: false, isLocal: false, rankBadge: 'BenchLM & AA Index #1 (92.8)', rankBadgeEn: 'BenchLM & AA Index #1 (92.8)', qualityScore: 99, costScore: 52, evalBasis: '2026-11-09 发布，BenchLM 2026-11 综合与编程双榜 #1 (92.8/100)、WebDev Arena #1、AA Index 65 榜首。', evalBasisEn: '#1 Overall & Coding on BenchLM Nov 2026 (92.8), #1 WebDev Arena, #1 AA Index (65).', summary: '2026-11 全球编程综合榜首旗舰，不计成本追求最高一次成功率的终极选择。', summaryEn: 'Top-ranked global coding flagship when peak first-pass accuracy is the priority.' }
+    ];
+
+    const TYPE_META = {
+      web: { label: 'Web 网站', labelEn: 'Website', stackHint: 'React / Next.js 或单文件 HTML + Tailwind CSS，优先托管至 Cloudflare Pages / Vercel 免费层', stackHintEn: 'React / Next.js or single-file HTML + Tailwind CSS hosted on Cloudflare Pages / Vercel free tier' },
+      saas: { label: 'SaaS 全栈应用', labelEn: 'Full-Stack SaaS', stackHint: 'Next.js / React + Supabase (免费 Auth/Postgres) + Stripe 订阅回调', stackHintEn: 'Next.js / React + Supabase (Free Auth/Postgres) + Stripe billing webhooks' },
+      extension: { label: '浏览器插件', labelEn: 'Browser Extension', stackHint: 'Chrome Extension Manifest V3 + TypeScript + Popup/SidePanel + Background Service Worker', stackHintEn: 'Chrome Extension Manifest V3 + TypeScript + Popup/SidePanel + Service Worker' },
+      desktop: { label: '桌面软件', labelEn: 'Desktop App', stackHint: 'Tauri (轻量跨平台) 或 Electron + 本地文件/SQLite 存储', stackHintEn: 'Tauri (lightweight cross-platform) or Electron + local SQLite storage' },
+      android: { label: 'Android 移动应用', labelEn: 'Android App', stackHint: 'Kotlin + Jetpack Compose (原生) 或 Flutter，提供完整 Gradle 配置与 APK 构建命令', stackHintEn: 'Kotlin + Jetpack Compose (native) or Flutter with Gradle APK build steps' },
+      mobile_cross: { label: 'iOS / 跨平台 App', labelEn: 'iOS / Cross-Platform', stackHint: 'Flutter 或 React Native (Expo)，一套代码双端编译', stackHintEn: 'Flutter or React Native (Expo) for unified iOS & Android builds' },
+      miniprogram: { label: '小程序', labelEn: 'Mini Program', stackHint: 'UniApp / Taro (React/Vue) 或原生微信小程序 + 云开发/轻量后端', stackHintEn: 'UniApp / Taro (React/Vue) or native Mini Program + serverless backend' },
+      cli: { label: '自动化脚本 / CLI', labelEn: 'Automation / CLI', stackHint: 'Python 3.11+ 或 Node.js CLI，带参数解析、异常重试与结构化日志输出', stackHintEn: 'Python 3.11+ or Node.js CLI with arg parsing, retries, and structured logging' },
+      agent: { label: 'AI Agent / 工作流', labelEn: 'AI Agent / Workflow', stackHint: '模块化 Tool Calling / 状态机编排 + 免费路由 Fallback + 流式输出', stackHintEn: 'Modular tool-calling state machine + free-router fallback + streaming output' }
+    };
+
+    const MODULE_META = {
+      frontend: { zh: '前端界面 (UI/UX)：响应式自适应布局、清晰交互反馈与无障碍操作体验', en: 'Frontend UI/UX: responsive layout, clear interactive feedback, and accessible controls' },
+      backend: { zh: '后端服务：RESTful / RPC 接口、输入校验、统一错误处理与环境变量隔离', en: 'Backend API: REST/RPC endpoints, input validation, unified error handling, env isolation' },
+      database: { zh: '数据库存储：表结构/Schema 设计、索引优化与本地/免费云端持久化方案', en: 'Database: schema design, indexing, and free-tier cloud or local SQLite persistence' },
+      auth: { zh: '用户登录鉴权：注册登录、JWT/Session 会话管理与路由权限守卫', en: 'Auth & Login: sign-up/login, JWT/session management, and route guards' },
+      payment: { zh: '支付订阅：商品套餐、Checkout 支付跳转、Webhook 异步验签与权益状态同步', en: 'Payments: pricing tiers, Checkout flow, signed webhooks, and entitlement sync' },
+      api: { zh: '第三方 API 集成：封装统一请求客户端、超时重试、限流退避与 Mock 降级', en: '3rd-Party APIs: typed HTTP client, timeouts, backoff retries, and fallback handling' },
+      ai: { zh: 'AI 能力接入：支持多模型配置、流式响应与低成本/免费路由降级策略', en: 'AI Integration: multi-model config, streaming responses, and free-tier fallback' },
+      data: { zh: '数据采集 / 处理：结构化清洗管道、断点续传、去重与 CSV/Excel/JSON 导出', en: 'Data / Scraping: structured ETL pipeline, deduplication, and CSV/JSON export' },
+      local: { zh: '本地离线 / 隐私：纯本地运行、零外部敏感数据上报、支持本地存储或 Ollama 模型', en: 'Local / Privacy: 100% local execution, zero telemetry, local DB or Ollama support' }
+    };
+
+    let selectedType = 'web';
+    let selectedModules = new Set(['frontend']);
+    let liveFreeModels = [];
+    let chartInstance = null;
+
+    // =========================================================================
+    // 2. PARETO MATCHING ENGINE
+    // =========================================================================
+    function extractIdeaSignals(idea) {
+      const t = (idea || '').toLowerCase();
+      return {
+        isLocal: /离线|内网|隐私|本地模型|不出网|公司安全|私有|offline|air-gapped|local model|privacy/.test(t),
+        isCN: /国内|中文|微信|小程序|支付宝|阿里云|腾讯云|无需代理|直连|飞书|钉钉|china|wechat/.test(t),
+        isComplex: /重构|大型|几十个|微服务|架构|全仓|复杂系统|疑难|规范|企业级|高并发|refactor|monorepo|enterprise|microservice/.test(t),
+        isUI: /前端|landing|官网|展示页|ui|颜值|tailwind|react|next|原型|页面|动画|dashboard/.test(t),
+        isScript: /python|脚本|爬虫|自动化|excel|数据清洗|cli|命令行|定时任务|scraper|automation|script/.test(t),
+        isMobile: /安卓|android|ios|app|flutter|react native|鸿蒙|apk|mobile/.test(t),
+        isExtension: /插件|chrome|浏览器扩展|油猴|tampermonkey|extension/.test(t),
+        isWebPref: /网页端|浏览器里|不装软件|免安装|在线开发|零配置|in browser|no install/.test(t)
+      };
+    }
+
+    const TOOL_ALLOWED_MODELS = {
+      'antigravity': ['gemini-4-hydrogen', 'gemini-4-carbon'],
+      'ai-studio-build': ['gemini-4-hydrogen', 'gemini-4-carbon'],
+      'firebase-studio': ['gemini-4-hydrogen', 'gemini-4-carbon'],
+      'claude-code': ['claude-sonnet-5.5', 'claude-fable-5.2'],
+      'codex-cli': ['gpt-6.1-sol'],
+      'bolt': ['gemini-4-hydrogen', 'claude-sonnet-5.5'],
+      'lovable': ['gemini-4-hydrogen', 'claude-sonnet-5.5'],
+      'v0': ['gemini-4-hydrogen', 'claude-sonnet-5.5', 'gpt-6.1-sol'],
+      'replit': ['gemini-4-hydrogen', 'gpt-6.1-sol', 'claude-sonnet-5.5'],
+      'jetbrains-ai': ['ollama-local', 'gemini-4-hydrogen', 'claude-sonnet-5.5', 'claude-fable-5.2', 'gpt-6.1-sol'],
+      'windsurf': ['gemini-4-hydrogen', 'gemini-4-carbon', 'claude-sonnet-5.5'],
+      'kiro': ['claude-sonnet-5.5', 'claude-fable-5.2', 'gpt-6.1-sol']
+    };
+
+    function scoreTool(tool, budget, rolePref, privacyPref, sig) {
+      let s = 0;
+      if (budget === 'free') {
+        s = tool.qualityScore * 0.35 + tool.costScore * 0.45 + tool.easeScore * 0.12 + tool.ecosystemScore * 0.08;
+        if (!tool.freeTier) s -= 90;
+        else s += 16;
+      } else if (budget === 'value') {
+        s = tool.qualityScore * 0.55 + tool.costScore * 0.25 + tool.easeScore * 0.10 + tool.ecosystemScore * 0.10;
+        if (tool.supportsBYOK) s += 20;
+        if (['cline', 'kilo-code', 'opencode', 'trae', 'copilot', 'aider'].includes(tool.id)) s += 12;
+        if (['ai-studio-build', 'firebase-studio', 'replit'].includes(tool.id)) s -= 12;
+        if (['claude-code', 'lovable', 'cursor'].includes(tool.id) && !tool.supportsBYOK) s -= 12;
+      } else {
+        s = tool.qualityScore * 0.80 + tool.ecosystemScore * 0.12 + tool.easeScore * 0.08;
+        if (['cursor', 'claude-code', 'codex-cli', 'antigravity', 'jetbrains-ai'].includes(tool.id)) s += 16;
+        if (['ai-studio-build', 'replit', 'continue-dev', 'bolt'].includes(tool.id)) s -= 20;
+      }
+
+      const needLocal = privacyPref === 'local' || ((selectedModules.has('local') || sig.isLocal) && budget !== 'flagship');
+      if (needLocal) {
+        if (!tool.supportsLocal) s -= 150;
+        else s += 35;
+      }
+      if (privacyPref === 'cn' || sig.isCN) {
+        if (tool.cnFriendly) s += 24;
+        else if (!needLocal) s -= 18;
+      }
+
+      const canUseWeb = ['web', 'saas', 'agent', 'miniprogram'].includes(selectedType) || (selectedType === 'mobile_cross' && !needLocal);
+      if (rolePref === 'web' || sig.isWebPref) {
+        if (tool.isWebBased) s += 32;
+        else s -= 28;
+      } else if (rolePref === 'dev') {
+        if (!tool.isWebBased) s += 22;
+        else s -= 20;
+      } else if (rolePref === 'auto' && budget === 'free' && canUseWeb && !needLocal) {
+        if (tool.isWebBased) s += 8;
+      }
+
+      if (tool.tags.includes(selectedType)) s += 24;
+      else s -= 20;
+
+      if (selectedType === 'web') {
+        if (budget === 'free' && ['v0', 'ai-studio-build', 'bolt'].includes(tool.id)) s += 10;
+        if (budget === 'value' && ['trae', 'copilot', 'cline'].includes(tool.id)) s += 8;
+        if (budget === 'flagship' && ['cursor', 'v0'].includes(tool.id)) s += 12;
+      } else if (selectedType === 'saas') {
+        if (budget === 'free' && ['lovable', 'firebase-studio', 'bolt', 'ai-studio-build'].includes(tool.id)) s += 12;
+        if (budget === 'value' && ['kilo-code', 'cline', 'trae'].includes(tool.id)) s += 12;
+        if (budget === 'flagship' && (rolePref === 'web' ? tool.id === 'lovable' : tool.id === 'cursor')) s += 16;
+      } else if (selectedType === 'extension') {
+        if (['cline', 'antigravity', 'cursor', 'trae'].includes(tool.id)) s += 14;
+      } else if (selectedType === 'desktop') {
+        if (['cline', 'kilo-code', 'cursor', 'antigravity', 'opencode'].includes(tool.id)) s += 14;
+      } else if (selectedType === 'android') {
+        if (tool.id === 'jetbrains-ai') s += 24;
+        if (['firebase-studio', 'antigravity', 'kilo-code'].includes(tool.id)) s += 10;
+      } else if (selectedType === 'mobile_cross') {
+        if (budget === 'free' && tool.id === 'firebase-studio') s += 20;
+        if (budget === 'value' && ['kilo-code', 'cline', 'trae'].includes(tool.id)) s += 10;
+        if (budget === 'flagship' && tool.id === 'cursor') s += 14;
+      } else if (selectedType === 'miniprogram') {
+        if (tool.id === 'trae') s += 26;
+        if (['cline', 'cursor'].includes(tool.id)) s += 10;
+      } else if (selectedType === 'cli') {
+        if (['aider', 'opencode', 'cline', 'claude-code'].includes(tool.id)) s += 22;
+        if (tool.isWebBased) s -= 24;
+      } else if (selectedType === 'agent') {
+        if (['antigravity', 'opencode', 'cline', 'claude-code'].includes(tool.id)) s += 16;
+      }
+
+      if (selectedModules.has('backend') || selectedModules.has('database') || selectedModules.has('auth') || selectedModules.has('payment')) {
+        if (['lovable', 'firebase-studio', 'bolt', 'cursor', 'cline', 'kilo-code'].includes(tool.id)) s += 6;
+        if (tool.id === 'v0') s -= 10;
+      }
+      if ((selectedModules.has('data') || sig.isScript) && ['aider', 'cline', 'opencode', 'claude-code'].includes(tool.id)) s += sig.isScript ? 22 : 12;
+      if (sig.isMobile && ['jetbrains-ai', 'firebase-studio', 'cursor'].includes(tool.id)) s += 18;
+      if (sig.isExtension && ['cline', 'antigravity', 'cursor', 'trae'].includes(tool.id)) s += 16;
+      if ((sig.isComplex || selectedModules.size >= 4) && ['claude-code', 'cursor', 'kilo-code', 'kiro', 'codex-cli'].includes(tool.id)) s += 12;
+      if (budget === 'flagship' && selectedModules.size >= 4 && tool.id === 'claude-code') s += 12;
+
+      return s;
+    }
+
+    function scoreModel(model, tool, budget, privacyPref, sig) {
+      const allowed = TOOL_ALLOWED_MODELS[tool.id];
+      if (allowed && !allowed.includes(model.id)) return -999;
+
+      const needLocal = privacyPref === 'local' || ((selectedModules.has('local') || sig.isLocal) && budget !== 'flagship');
+      if (needLocal && !model.isLocal) return -999;
+
+      let s = 0;
+      if (budget === 'free') {
+        s = model.qualityScore * 0.35 + model.costScore * 0.65;
+        if (!model.isFree) s -= 85;
+        else s += 22;
+      } else if (budget === 'value') {
+        s = model.qualityScore * 0.68 + model.costScore * 0.32;
+        if (['deepseek-v4-pro', 'deepseek-v4-flash'].includes(model.id)) s += 24;
+        else if (['qwen-3.8-flash', 'glm-5.3-flash'].includes(model.id)) s += 16;
+        else if (model.id === 'gemini-4-hydrogen') s += 8;
+        if (model.costScore < 75) s -= 25;
+      } else {
+        s = model.qualityScore * 1.0;
+        if (model.id === 'claude-fable-5.2') s += 32;
+        else if (['gpt-6.1-sol', 'gemini-4-carbon', 'claude-sonnet-5.5', 'deepseek-v4-pro'].includes(model.id)) s += 16;
+        if (model.isFree && !needLocal) s -= 65;
+      }
+
+      if (needLocal && model.isLocal) s += 40;
+      else if (!needLocal && model.isLocal) s -= 35;
+
+      if (privacyPref === 'cn' || sig.isCN) {
+        if (model.cnFriendly) s += 20;
+        else if (!model.isLocal) s -= 14;
+      }
+
+      if (sig.isComplex && model.qualityScore >= 95) s += 6;
+      return s;
+    }
+
+    function computeLocalRecommendations(idea, budget, rolePref, privacyPref) {
+      const t = I18N[lang];
+      const typeLabel = t.types[selectedType] || TYPE_META[selectedType].label;
+      const modLabels = Array.from(selectedModules).map(m => t.mods[m] || m);
+      const sig = extractIdeaSignals(idea);
+
+      const activeModels = MODELS.map(m => {
+        if (m.id === 'openrouter-free' && liveFreeModels.length > 0) {
+          const top = liveFreeModels[0];
+          return {
+            ...m,
+            name: lang === 'en' ? `OpenRouter Free (${top.id})` : `OpenRouter 免费路由 (${top.id})`,
+            pricing: `$0 / 1M · ${(top.context_length || 128000).toLocaleString()} ctx`,
+            pricingEn: `$0 / 1M · ${(top.context_length || 128000).toLocaleString()} ctx`,
+            url: `https://openrouter.ai/${top.id}`
+          };
+        }
+        return m;
+      });
+
+      const toolScored = TOOLS.map(tl => ({ tool: tl, tScore: scoreTool(tl, budget, rolePref, privacyPref, sig) })).sort((a, b) => b.tScore - a.tScore);
+      const candidates = [];
+
+      for (const { tool, tScore } of toolScored) {
+        const validModels = activeModels
+          .map(m => ({ model: m, mScore: scoreModel(m, tool, budget, privacyPref, sig) }))
+          .filter(x => x.mScore > -500)
+          .sort((a, b) => b.mScore - a.mScore);
+
+        if (validModels.length === 0) continue;
+        const bestModelObj = validModels[0];
+        const quality = Math.round(tool.qualityScore * 0.45 + bestModelObj.model.qualityScore * 0.55);
+        const cost = Math.round(tool.costScore * 0.45 + bestModelObj.model.costScore * 0.55);
+        const ease = tool.easeScore;
+        const ecosystem = tool.ecosystemScore;
+        const combined = tScore * 0.55 + bestModelObj.mScore * 0.45;
+
+        let estCost = lang === 'en' ? '$0 / mo (Free Tier)' : '$0 / 月（免费额度内）';
+        if (bestModelObj.model.isLocal && tool.supportsLocal) {
+          estCost = lang === 'en' ? '$0 / mo (100% Offline)' : '$0 / 月（100% 本地离线）';
+        } else if (budget === 'flagship') {
+          estCost = tool.freeTier
+            ? (lang === 'en' ? `~$20+/mo (${bestModelObj.model.provider} Flagship)` : `约 $20+/月（${bestModelObj.model.provider} 旗舰订阅/按量）`)
+            : '$20 - $100 / mo';
+        } else if (budget === 'value') {
+          if (bestModelObj.model.id.includes('deepseek') || bestModelObj.model.id.includes('qwen') || bestModelObj.model.id.includes('glm')) {
+            estCost = tool.supportsBYOK
+              ? (lang === 'en' ? '~$0.3 - $3 / mo (Ultra-Low API)' : '约 $0.3 - $3 / 月（超低按量 API）')
+              : (lang === 'en' ? '~$3 - $10 / mo' : '约 $3 - $10 / 月');
+          } else if (tool.freeTier && bestModelObj.model.isFree) {
+            estCost = lang === 'en' ? '$0 / mo (Free Tier)' : '$0 / 月（免费额度足够日常）';
+          } else {
+            estCost = lang === 'en' ? '~$8 - $10 / mo' : '约 $8 - $10 / 月';
+          }
+        } else if (!tool.freeTier || !bestModelObj.model.isFree) {
+          estCost = bestModelObj.model.id.includes('deepseek') || bestModelObj.model.id.includes('qwen') || bestModelObj.model.id.includes('glm')
+            ? (lang === 'en' ? '~$0.2 - $2 / mo' : '约 $0.2 - $2 / 月（超低按量）')
+            : '$10 - $20 / mo';
+        }
+
+        candidates.push({ tool, model: bestModelObj.model, estCost, quality, cost, ease, ecosystem, sortKey: combined });
+        if (candidates.length >= 6) break;
+      }
+
+      candidates.sort((a, b) => b.sortKey - a.sortKey);
+      const topScore = candidates[0]?.sortKey || 100;
+      const ranked = candidates.slice(0, 3).map((c, idx) => {
+        const delta = Math.max(0, topScore - c.sortKey);
+        const matchPct = Math.min(98, Math.max(76, Math.round(97 - delta * 0.35 - idx * 1.5)));
+        return { ...c, total: matchPct };
+      });
+
+      const topTool = ranked[0].tool;
+      const reason = lang === 'en'
+        ? `Matched for "${typeLabel}" (${modLabels.slice(0, 4).join(', ')}) under ${t.budgets[budget]} strategy${topTool.isWebBased ? ' with direct browser workspace support' : ''}.`
+        : `基于「${t.budgets[budget]}」策略，针对「${typeLabel}」及所选功能件（${modLabels.join('、')}）匹配最优组合${topTool.isWebBased ? '，支持直接在网页端零配置开发与上线' : ''}。`;
+
+      return { engineLabel: t.engineLocal, archLabel: `${typeLabel} · ${modLabels.slice(0, 3).join(' + ')}`, reason, pairs: ranked };
+    }
+
+    // =========================================================================
+    // 3. TAILORED PROMPT GENERATOR (ZH / EN)
+    // =========================================================================
+    function generateTailoredPrompt(idea, winner, budget) {
+      const typeInfo = TYPE_META[selectedType] || TYPE_META.web;
+      const userDesc = idea.trim();
+
+      if (lang === 'en') {
+        const typeLabel = typeInfo.labelEn;
+        const modSpecs = Array.from(selectedModules).map((m, idx) => `   ${idx + 1}. ${MODULE_META[m].en}`).join('\n');
+        const costNote = budget === 'free'
+          ? 'Strictly $0/free-tier first: prefer open-source packages, free hosting (Cloudflare Pages / Vercel / GitHub Pages), and free-tier DB/auth (Supabase / Firebase Spark / SQLite).'
+          : (budget === 'value' ? 'Keep recurring cloud and token costs minimal while preserving clean architecture.' : 'Prioritize production scalability, strict typing, and maintainability.');
+
+        return `[Role & Objective]
+You are a senior full-stack architect specializing in "${typeLabel}". Build a complete, runnable project for:
+> Core Idea: ${userDesc || `Build a production-ready ${typeLabel}`}
+
+[Recommended Stack & Constraints]
+- Project Type: ${typeLabel}
+- Suggested Stack: ${typeInfo.stackHintEn}
+- Cost & Infra Constraint: ${costNote}
+- Target Environment: ${winner.tool.name} + ${winner.model.name}
+
+[Required Core Modules]
+${modSpecs || '   1. Core business logic and responsive user interface'}
+
+[Execution Guidelines]
+1. Architecture First: Output a concise folder structure, data schema, and module boundaries before writing code.
+2. Complete Code: Implement step by step with zero placeholders or TODOs.
+3. Security: Never hardcode API keys or secrets; manage all credentials via .env.example.
+4. Verification: Include exact local run/test commands and zero-cost deployment steps.`;
+      }
+
+      const modSpecs = Array.from(selectedModules).map((m, idx) => `   ${idx + 1}. ${MODULE_META[m].zh}`).join('\n');
+      const costConstraint = budget === 'free'
+        ? '严格控制零成本（$0）：优先使用免费开源组件、免费托管（Cloudflare Pages / Vercel / GitHub Pages）与免费数据库/认证额度（Supabase Free / Firebase Spark / SQLite）。'
+        : (budget === 'value' ? '优先选择低成本轻量方案，减少不必要的付费云服务与冗余 Token 消耗。' : '优先保证代码架构扩展性、类型安全与生产级稳定性。');
+
+      return `【角色与目标】
+你是一位精通「${typeInfo.label}」的资深全栈架构师。请帮我从零设计与实现以下项目：
+> 项目核心想法：${userDesc || `构建一个高质量、可运行的${typeInfo.label}`}
+
+【推荐技术底座与约束】
+- 项目形态：${typeInfo.label}
+- 建议技术栈：${typeInfo.stackHint}
+- 成本与部署约束：${costConstraint}
+- 当前开发环境：${winner.tool.name} + ${winner.model.name}
+
+【必须包含的核心功能模块】
+${modSpecs || '   1. 核心业务逻辑与清晰的用户交互界面'}
+
+【执行步骤与交付规范】
+1. 架构确认：先输出简明的目录结构、数据表/状态模型及模块依赖关系，不要直接堆砌无序代码。
+2. 增量实现：按「核心骨架 → 功能模块 → 边界校验与异常处理」分步输出完整可运行代码（禁止使用 TODO 或省略号截断）。
+3. 安全与配置：严禁硬编码任何 API 私钥或敏感凭据，统一通过环境变量与 .env.example 管理。
+4. 验证与上线：每完成一个阶段，提供可直接执行的本地运行测试命令与免费部署步骤。`;
+    }
+
+    // =========================================================================
+    // 4. AI DEEP ANALYSIS & CUSTOM MODEL CONNECTION TEST
+    // =========================================================================
+    function getAiConfig() {
+      const provider = document.getElementById('aiProviderSelect').value;
+      if (provider === 'custom') {
+        return {
+          provider: 'custom',
+          model: document.getElementById('customModelName').value.trim(),
+          url: document.getElementById('customModelUrl').value.trim(),
+          apiKey: document.getElementById('customModelKey').value.trim()
+        };
+      }
+      return {
+        provider,
+        model: provider === 'openrouter' ? 'openrouter/free' : 'gemini-4-hydrogen',
+        url: provider === 'openrouter'
+          ? 'https://openrouter.ai/api/v1/chat/completions'
+          : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+        apiKey: document.getElementById('aiApiKeyInput').value.trim()
+      };
+    }
+
+    async function testAiConnection() {
+      const cfg = getAiConfig();
+      const badge = document.getElementById('connStatusBadge');
+      const btn = document.getElementById('testConnBtn');
+      const t = I18N[lang];
+
+      if (!cfg.apiKey || (cfg.provider === 'custom' && (!cfg.model || !cfg.url))) {
+        badge.className = 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        badge.textContent = lang === 'en' ? '⚠️ Missing Model/URL/Key' : '⚠️ 请完善模型、URL 与私钥';
+        badge.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = t.testing;
+      const t0 = performance.now();
+
+      try {
+        let res;
+        if (cfg.provider === 'gemini') {
+          res = await fetch(`${cfg.url}?key=${encodeURIComponent(cfg.apiKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: 'ping' }] }], generationConfig: { maxOutputTokens: 5 } })
+          });
+        } else {
+          res = await fetch(cfg.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}` },
+            body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
+          });
+        }
+
+        const ms = Math.round(performance.now() - t0);
+        if (!res.ok) {
+          const errBody = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 50)}`);
+        }
+
+        badge.className = 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+        badge.textContent = lang === 'en' ? `✅ Connected (${ms}ms)` : `✅ 连接成功 (${ms}ms)`;
+        badge.classList.remove('hidden');
+        showToast(lang === 'en' ? `Connected (${ms}ms)` : `模型接口连接成功 (${ms}ms)`);
+      } catch (err) {
+        badge.className = 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800';
+        badge.textContent = `❌ ${err.message.slice(0, 40)}`;
+        badge.classList.remove('hidden');
+        showToast(lang === 'en' ? 'Connection failed' : '连接失败，请检查配置');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = t.testConn;
+      }
+    }
+
+    async function runAiDeepAnalysis(idea, budget, rolePref, privacyPref) {
+      const cfg = getAiConfig();
+      const t = I18N[lang];
+      if (!cfg.apiKey || (cfg.provider === 'custom' && (!cfg.model || !cfg.url))) {
+        showToast(lang === 'en' ? 'Missing API key, using local engine' : 'AI 配置不完整，已自动使用本地精准引擎');
+        return null;
+      }
+
+      const typeLabel = t.types[selectedType] || 'Web';
+      const modLabels = Array.from(selectedModules).map(m => t.mods[m]).join(', ');
+      const toolIds = TOOLS.map(tl => `${tl.id}(${tl.name},web:${tl.isWebBased})`).join('; ');
+      const modelIds = MODELS.map(m => `${m.id}(${m.name},${m.rankBadgeEn})`).join('; ');
+
+      const prompt = `You are an AI software architect. Pick 1 optimal stack and 2 alternatives following "best quality at lowest/free cost for the selected budget". Reply in ${lang === 'en' ? 'English' : 'Chinese'}.
+Project: ${typeLabel}, Modules: ${modLabels}, Notes: ${idea || 'none'}, Budget: ${budget}, Workflow: ${rolePref}, Region/Privacy: ${privacyPref}.
+Tools: ${toolIds}
+Models: ${modelIds}
+Return ONLY raw JSON: {"archLabel":"...","reason":"...","picks":[{"toolId":"...","modelId":"...","estCost":"..."}]}`;
+
+      const btnText = document.getElementById('analyzeBtnText');
+      btnText.textContent = t.analyzing;
+
+      try {
+        let rawText = '';
+        if (cfg.provider === 'gemini') {
+          const res = await fetch(`${cfg.url}?key=${encodeURIComponent(cfg.apiKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        } else {
+          const res = await fetch(cfg.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}` },
+            body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 })
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          rawText = data.choices?.[0]?.message?.content || '';
+        }
+
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Invalid JSON');
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (!Array.isArray(parsed.picks) || parsed.picks.length === 0) throw new Error('Empty picks');
+
+        const pairs = parsed.picks.map((p, idx) => {
+          const tool = TOOLS.find(tl => tl.id === p.toolId) || TOOLS[0];
+          const model = MODELS.find(m => m.id === p.modelId) || MODELS[0];
+          const quality = Math.round(tool.qualityScore * 0.45 + model.qualityScore * 0.55);
+          const cost = Math.round(tool.costScore * 0.45 + model.costScore * 0.55);
+          const total = Math.min(98, Math.max(82, Math.round(97 - idx * 3)));
+          return { tool, model, estCost: p.estCost || (model.isFree && tool.freeTier ? '$0 / mo' : 'Pay-as-you-go'), quality, cost, ease: tool.easeScore, ecosystem: tool.ecosystemScore, total };
+        });
+
+        while (pairs.length < 3) {
+          const fallback = computeLocalRecommendations(idea, budget, rolePref, privacyPref).pairs[pairs.length];
+          if (fallback) pairs.push(fallback);
+          else break;
+        }
+
+        showToast(lang === 'en' ? 'AI deep match complete!' : '已完成 AI 深度语义匹配！');
+        return { engineLabel: `AI (${cfg.model})`, archLabel: parsed.archLabel || typeLabel, reason: parsed.reason || '', pairs: pairs.slice(0, 3) };
+      } catch (err) {
+        showToast(lang === 'en' ? 'AI call failed, fell back to local engine' : 'AI 接口调用失败，已自动回退本地精准引擎');
+        return null;
+      } finally {
+        btnText.textContent = t.analyzeBtn;
+      }
+    }
+
+    // =========================================================================
+    // 5. BILINGUAL UI & RENDERING
+    // =========================================================================
+    function applyLanguage() {
+      const t = I18N[lang];
+      document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+      document.getElementById('langBtnText').textContent = t.langBtn;
+      document.getElementById('syncText').textContent = liveFreeModels.length > 0 ? t.synced : t.syncBtn;
+      document.getElementById('lblStep1').textContent = t.step1;
+      document.getElementById('lblStep2').textContent = t.step2;
+      document.getElementById('lblStep3').textContent = t.step3;
+      document.getElementById('ideaInput').placeholder = t.placeholder;
+      document.getElementById('lblBudget').textContent = t.budgetLbl;
+      document.getElementById('lblRole').textContent = t.roleLbl;
+      document.getElementById('lblPrivacy').textContent = t.privacyLbl;
+
+      Array.from(document.getElementById('budgetSelect').options).forEach(opt => { opt.textContent = t.budgets[opt.value]; });
+      Array.from(document.getElementById('roleSelect').options).forEach(opt => { opt.textContent = t.roles[opt.value]; });
+      Array.from(document.getElementById('privacySelect').options).forEach(opt => { opt.textContent = t.privacies[opt.value]; });
+      Array.from(document.getElementById('aiProviderSelect').options).forEach(opt => { opt.textContent = t.providers[opt.value]; });
+
+      document.querySelectorAll('.type-pill').forEach(btn => {
+        btn.textContent = t.types[btn.getAttribute('data-type')];
+      });
+      document.querySelectorAll('.mod-pill').forEach(btn => {
+        btn.textContent = t.mods[btn.getAttribute('data-mod')];
+      });
+
+      document.getElementById('lblAiToggle').textContent = t.aiToggle;
+      document.getElementById('aiApiKeyInput').placeholder = t.apiKeyPh;
+      document.getElementById('testConnBtn').textContent = t.testConn;
+      document.getElementById('lblCustomName').textContent = t.customName;
+      document.getElementById('lblCustomUrl').textContent = t.customUrl;
+      document.getElementById('lblCustomKey').textContent = t.customKey;
+      document.getElementById('lblKeyHint').textContent = t.keyHint;
+      document.getElementById('getFreeKeyLink').textContent = t.getFreeKey;
+      document.getElementById('lblShortcut').textContent = t.shortcut;
+      document.getElementById('analyzeBtnText').textContent = t.analyzeBtn;
+      document.getElementById('lblMatchScore').textContent = t.matchScore;
+      document.getElementById('lblAltsTitle').textContent = t.altsTitle;
+      document.getElementById('lblChartTitle').textContent = t.chartTitle;
+      document.getElementById('lblChartSub').textContent = t.chartSub;
+      document.getElementById('lblPromptTitle').textContent = t.promptTitle;
+      document.getElementById('lblPromptSub').textContent = t.promptSub;
+      document.getElementById('copyConfigBtn').textContent = t.copyBtn;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2800);
+    }
+
+    async function runAnalysis() {
+      const t = I18N[lang];
+      const idea = document.getElementById('ideaInput').value.trim();
+      const budget = document.getElementById('budgetSelect').value;
+      const rolePref = document.getElementById('roleSelect').value;
+      const privacyPref = document.getElementById('privacySelect').value;
+      const useAi = document.getElementById('useAiToggle').checked;
+
+      let result = null;
+      if (useAi) result = await runAiDeepAnalysis(idea, budget, rolePref, privacyPref);
+      if (!result) result = computeLocalRecommendations(idea, budget, rolePref, privacyPref);
+
+      const { engineLabel, archLabel, reason, pairs } = result;
+      const winner = pairs[0];
+      const alts = pairs.slice(1);
+
+      document.getElementById('engineBadge').textContent = engineLabel;
+      document.getElementById('detectedArchetype').textContent = archLabel;
+      document.getElementById('detectedCostBadge').textContent = `${t.estPrefix}${winner.estCost}`;
+      document.getElementById('detectedReason').textContent = reason;
+      document.getElementById('matchScoreText').textContent = `${winner.total}%`;
+
+      const toolCat = lang === 'en' ? winner.tool.categoryLabelEn : winner.tool.categoryLabel;
+      const toolSum = lang === 'en' ? winner.tool.summaryEn : winner.tool.summary;
+      const toolPrice = lang === 'en' ? winner.tool.pricingEn : winner.tool.pricing;
+      const toolBasis = lang === 'en' ? winner.tool.evalBasisEn : winner.tool.evalBasis;
+
+      const modRank = lang === 'en' ? winner.model.rankBadgeEn : winner.model.rankBadge;
+      const modSum = lang === 'en' ? winner.model.summaryEn : winner.model.summary;
+      const modPrice = lang === 'en' ? winner.model.pricingEn : winner.model.pricing;
+      const modBasis = lang === 'en' ? winner.model.evalBasisEn : winner.model.evalBasis;
+
+      const webJumpBtn = winner.tool.isWebBased && winner.tool.webUrl
+        ? `<a href="${winner.tool.webUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-semibold transition shadow-sm"><span>${t.jumpWeb}</span><span>↗</span></a>`
+        : '';
+
+      document.getElementById('winnerCard').innerHTML = `
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-5 py-3.5 text-white flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="px-2.5 py-0.5 rounded-lg bg-indigo-500/30 border border-indigo-400/30 text-xs font-bold">${t.winnerBadge}</span>
+            <span class="text-sm sm:text-base font-bold tracking-tight">${winner.tool.name} + ${winner.model.name}</span>
+          </div>
+          <span class="text-xs font-semibold bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 px-3 py-1 rounded-full">${winner.estCost}</span>
+        </div>
+        <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-3 border-b md:border-b-0 md:border-r border-slate-100 pb-5 md:pb-0 md:pr-6">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">${t.toolLabel}</span>
+              <span class="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">${toolCat}</span>
+            </div>
+            <h4 class="text-lg font-bold text-slate-900">${winner.tool.name}</h4>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${toolSum}</p>
+            <div class="text-xs bg-slate-50 rounded-xl p-3 text-slate-700 border border-slate-200/70 space-y-1.5">
+              <div><strong>${t.pricingLbl}</strong>${toolPrice}</div>
+              <div class="text-slate-500"><strong>${t.basisLbl}</strong>${toolBasis}</div>
+            </div>
+            <div class="pt-1 flex flex-wrap gap-2">
+              <a href="${winner.tool.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm">
+                <span>${t.jumpTool} ${winner.tool.name}</span>
+                <span>↗</span>
+              </a>
+              ${webJumpBtn}
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">${t.modelLabel}</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-semibold">${modRank}</span>
+            </div>
+            <h4 class="text-lg font-bold text-slate-900">${winner.model.name}</h4>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${modSum}</p>
+            <div class="text-xs bg-emerald-50/60 rounded-xl p-3 text-emerald-950 border border-emerald-200/60 space-y-1.5">
+              <div><strong>${t.costLbl}</strong>${modPrice}</div>
+              <div class="text-emerald-800"><strong>${t.rankLbl}</strong>${modBasis}</div>
+            </div>
+            <div class="pt-1">
+              <a href="${winner.model.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm">
+                <span>${t.jumpModel} ${winner.model.provider}</span>
+                <span>↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('alternativesList').innerHTML = alts.map((alt, i) => `
+        <div class="surface-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-indigo-300 transition">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">${t.altLabel} ${i + 1} · ${alt.total}%</span>
+              <span class="text-sm font-bold text-slate-900">${alt.tool.name} + ${alt.model.name}</span>
+            </div>
+            <p class="text-xs text-slate-600">${alt.estCost} · ${lang === 'en' ? alt.model.rankBadgeEn : alt.model.rankBadge}</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${alt.tool.isWebBased && alt.tool.webUrl ? `<a href="${alt.tool.webUrl}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-xs font-medium text-amber-800 transition">${t.altWeb}</a>` : ''}
+            <a href="${alt.tool.url}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:border-indigo-500 hover:text-indigo-600 text-xs font-medium text-slate-700 transition">${t.altTool}</a>
+            <a href="${alt.model.url}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-medium text-emerald-700 transition">${t.altModel}</a>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('starterConfig').textContent = generateTailoredPrompt(idea, winner, budget);
+      renderChart(pairs);
+    }
+
+    function renderChart(pairs) {
+      const ctx = document.getElementById('comparisonChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+      const labels = I18N[lang].chartAxes;
+      const colors = [
+        { border: '#4f46e5', bg: 'rgba(79, 70, 229, 0.18)' },
+        { border: '#10b981', bg: 'rgba(16, 185, 129, 0.14)' },
+        { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' }
+      ];
+      chartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels,
+          datasets: pairs.map((p, idx) => ({
+            label: `${p.tool.name.split(' ')[0]} + ${p.model.provider.split('/')[0]}`,
+            data: [p.quality, p.cost, p.ease, p.ecosystem],
+            borderColor: colors[idx % 3].border,
+            backgroundColor: colors[idx % 3].bg,
+            borderWidth: 2,
+            pointRadius: 3
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { r: { min: 45, max: 100, ticks: { stepSize: 15, font: { size: 10 } }, pointLabels: { font: { size: 11, weight: '600' } } } },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+        }
+      });
+    }
+
+    async function syncLiveModels(silent = false) {
+      const t = I18N[lang];
+      const syncBtn = document.getElementById('syncBtn');
+      const syncIcon = document.getElementById('syncIcon');
+      const syncText = document.getElementById('syncText');
+      syncIcon.textContent = '⏳';
+      syncText.textContent = t.syncing;
+      syncBtn.disabled = true;
+
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/models');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        const models = Array.isArray(json.data) ? json.data : [];
+        liveFreeModels = models
+          .filter(m => m.pricing && String(m.pricing.prompt) === '0' && String(m.pricing.completion) === '0')
+          .sort((a, b) => (b.created || 0) - (a.created || 0) || (b.context_length || 0) - (a.context_length || 0))
+          .slice(0, 30);
+
+        syncIcon.textContent = '✅';
+        syncText.textContent = t.synced;
+        runAnalysis();
+        if (!silent) showToast(lang === 'en' ? `Synced ${liveFreeModels.length} live free models` : `已同步 ${liveFreeModels.length} 个最新免费大模型与实时价格`);
+      } catch (err) {
+        syncIcon.textContent = '🔄';
+        syncText.textContent = t.syncBtn;
+        if (!silent) showToast(lang === 'en' ? 'Sync failed, using 2026-11 baseline' : '实时同步失败，当前使用 2026-11-19 最新内置基准库');
+      } finally {
+        syncBtn.disabled = false;
+      }
+    }
+
+    function copyText(text, okMsg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(okMsg)).catch(() => fallbackCopy(text, okMsg));
+      } else {
+        fallbackCopy(text, okMsg);
+      }
+    }
+
+    function fallbackCopy(text, okMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(okMsg);
+      } catch (e) {
+        showToast('Copy failed');
+      }
+      document.body.removeChild(ta);
+    }
+
+    // =========================================================================
+    // 6. INIT & EVENT LISTENERS
+    // =========================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const savedLang = localStorage.getItem('ai_match_lang');
+        if (savedLang === 'en' || savedLang === 'zh') lang = savedLang;
+      } catch (e) {}
+
+      document.getElementById('langBtn').addEventListener('click', () => {
+        lang = lang === 'zh' ? 'en' : 'zh';
+        try { localStorage.setItem('ai_match_lang', lang); } catch (e) {}
+        applyLanguage();
+        runAnalysis();
+      });
+
+      document.querySelectorAll('.type-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedType = btn.getAttribute('data-type');
+          document.querySelectorAll('.type-pill').forEach(b => {
+            b.classList.remove('pill-active');
+            b.classList.add('pill-inactive');
+          });
+          btn.classList.add('pill-active');
+          btn.classList.remove('pill-inactive');
+          runAnalysis();
+        });
+      });
+
+      document.querySelectorAll('.mod-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const mod = btn.getAttribute('data-mod');
+          if (selectedModules.has(mod)) {
+            if (selectedModules.size > 1) {
+              selectedModules.delete(mod);
+              btn.classList.remove('mod-active');
+              btn.classList.add('mod-inactive');
+            }
+          } else {
+            selectedModules.add(mod);
+            btn.classList.add('mod-active');
+            btn.classList.remove('mod-inactive');
+          }
+          runAnalysis();
+        });
+      });
+
+      document.getElementById('useAiToggle').addEventListener('change', e => {
+        const row = document.getElementById('aiKeyRow');
+        if (e.target.checked) row.classList.remove('hidden');
+        else row.classList.add('hidden');
+      });
+
+      document.getElementById('aiProviderSelect').addEventListener('change', e => {
+        const val = e.target.value;
+        const builtinWrap = document.getElementById('builtinKeyWrap');
+        const customFields = document.getElementById('customModelFields');
+        const freeHint = document.getElementById('freeKeyHintRow');
+        const link = document.getElementById('getFreeKeyLink');
+        document.getElementById('connStatusBadge').classList.add('hidden');
+
+        if (val === 'custom') {
+          builtinWrap.classList.add('hidden');
+          customFields.classList.remove('hidden');
+          freeHint.classList.add('hidden');
+        } else {
+          builtinWrap.classList.remove('hidden');
+          customFields.classList.add('hidden');
+          freeHint.classList.remove('hidden');
+          link.href = val === 'gemini' ? 'https://aistudio.google.com/apikey' : 'https://openrouter.ai/keys';
+        }
+      });
+
+      document.getElementById('testConnBtn').addEventListener('click', testAiConnection);
+
+      document.getElementById('analyzeBtn').addEventListener('click', async () => {
+        await runAnalysis();
+        const rc = document.getElementById('resultsContainer');
+        rc.classList.remove('fade-in');
+        void rc.offsetWidth;
+        rc.classList.add('fade-in');
+        document.getElementById('analysisSummary').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        showToast(lang === 'en' ? '✅ Stack recommendation updated' : '✅ 已完成智能匹配与方案更新');
+      });
+
+      let _ideaTimer = null;
+      document.getElementById('ideaInput').addEventListener('input', () => {
+        clearTimeout(_ideaTimer);
+        _ideaTimer = setTimeout(runAnalysis, 350);
+      });
+      document.getElementById('ideaInput').addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runAnalysis();
+      });
+
+      ['budgetSelect', 'roleSelect', 'privacySelect'].forEach(id => {
+        document.getElementById(id).addEventListener('change', runAnalysis);
+      });
+
+      document.getElementById('syncBtn').addEventListener('click', () => syncLiveModels(false));
+      document.getElementById('copyConfigBtn').addEventListener('click', () => {
+        copyText(document.getElementById('starterConfig').textContent, I18N[lang].copiedToast);
+      });
+
+      applyLanguage();
+      runAnalysis();
+      syncLiveModels(true);
+    });
+  </script>
+</body>
+</html>
